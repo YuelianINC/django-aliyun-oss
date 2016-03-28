@@ -12,13 +12,24 @@ from django.core.files.storage import Storage
 from aliyun_oss.oss.oss_api import OssAPI
 from aliyun_oss.oss.oss_util import convert_header2map, safe_get_element
 
-ACCESS_ADDRESS = getattr(settings, 'OSS_ACCESS_URL', 'oss.aliyuncs.com')
-ACCESS_KEY_NAME = getattr(settings, 'OSS_ACCESS_KEY_ID')
-SECRET_KEY_NAME = getattr(settings, 'OSS_SECRET_ACCESS_KEY')
-HEADERS = getattr(settings, 'OSS_HEADERS', {})
-DEFAULT_ACL = getattr(settings, 'OSS_DEFAULT_ACL', 'public-read')
-OSS_STORAGE_BUCKET_NAME = getattr(settings, 'OSS_STORAGE_BUCKET_NAME')
-BUCKET_PREFIX = getattr(settings, 'OSS_BUCKET_PREFIX', '')
+try:
+    ACCESS_ADDRESS = getattr(settings, 'OSS_ACCESS_URL', 'oss.aliyuncs.com')
+except:
+    ACCESS_ADDRESS = ''
+    ACCESS_KEY_NAME = ''
+    SECRET_KEY_NAME = ''
+    HEADERS = ''
+    DEFAULT_ACL = ''
+    OSS_STORAGE_BUCKET_NAME = ''
+    BUCKET_PREFIX = ''
+else:
+    ACCESS_ADDRESS = getattr(settings, 'OSS_ACCESS_URL', 'oss.aliyuncs.com')
+    ACCESS_KEY_NAME = getattr(settings, 'OSS_ACCESS_KEY_ID')
+    SECRET_KEY_NAME = getattr(settings, 'OSS_SECRET_ACCESS_KEY')
+    HEADERS = getattr(settings, 'OSS_HEADERS', {})
+    DEFAULT_ACL = getattr(settings, 'OSS_DEFAULT_ACL', 'public-read')
+    OSS_STORAGE_BUCKET_NAME = getattr(settings, 'OSS_STORAGE_BUCKET_NAME')
+    BUCKET_PREFIX = getattr(settings, 'OSS_BUCKET_PREFIX', '')
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +86,8 @@ class OSSStorage(Storage):
         fp = BytesIO(content)
         logger.debug('')
         response = self.connection.put_object_from_fp(self.bucket, name, fp, content_type, self.headers)
-        if (response.status / 100) != 2:
+        if int(response.status / 100) != 2:
+            # if (response.status / 100) != 2:
             raise IOError("OSSStorageError: %s" % response.read())
 
     def _open(self, name, mode='rb'):
@@ -90,6 +102,7 @@ class OSSStorage(Storage):
         else:
             headers = {'Range': 'bytes=%s-%s' % (start_range, end_range)}
         response = self.connection.get_object(self.bucket, name, headers)
+        print('response.status', response.status)
         if int(response.status / 100) != 2:
             raise IOError("OSSStorageError: %s, %s" % (response.status, response.read()))
 
@@ -157,18 +170,20 @@ class OSSStorage(Storage):
     def copy_to_file(self, name, target):
         name = self._clean_name(name)
         response = self.connection.get_object_to_file(self.bucket, name, target)
-        if response.status / 100 != 2:
+        if int(response.status / 100) != 2:
+            # if response.status / 100 != 2:
             raise IOError("OSSStorageError: %s" % response.read())
 
     def save_file(self, filename, name):
         name = self._clean_name(name)
         response = self.connection.put_object_from_file(self.bucket, name, filename=filename, headers=self.headers)
-        if response.status / 100 != 2:
+        if int(response.status / 100) != 2:
             raise IOError("OSSStorageError: %s" % response.read())
 
 
 class OSSStorageFile(File):
-    def __init__(self, name, storage, mode):
+    def __init__(self, name, storage, mode, file=None):
+        super().__init__(file, name)
         self._name = name
         self._storage = storage
         self._mode = mode
@@ -185,24 +200,19 @@ class OSSStorageFile(File):
     def read(self, num_bytes=None):
         if self.start_range == -1:
             return None
-        # if num_bytes is None:
-        #     args = []
-        #     self.start_range = 0
-        # else:
-        #     args = [self.start_range, self.start_range + num_bytes - 1]
-        args = []
+        if num_bytes is None:
+            args = []
+            self.start_range = 0
+        else:
+            args = [self.start_range, self.start_range + num_bytes - 1]
         self.start_range = 0
-        # print(args)
         data, etags, content_range = self._storage._read(self._name, *args)
-        # print(self._name, "====={}+++".format(content_range))
         if content_range:
-            # print(content_range)
             current_range, size = content_range.split(' ', 1)[1].split('/', 1)
             start_range, end_range = current_range.split('-', 1)
             self._size, self.start_range = int(size), int(end_range) + 1
-        # else:
-        #     self.start_range = -1
-        self.start_range = -1
+        else:
+            self.start_range = -1
         self.file = BytesIO(data)
         return self.file.getvalue()
 
