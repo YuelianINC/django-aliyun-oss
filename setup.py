@@ -8,13 +8,13 @@ from setuptools import setup, find_packages
 
 setup(
     name='django-aliyun-oss',
-    version='0.3',
+    version='0.3.1',
     packages=find_packages(),
     author='WANG Tai',
     author_email='wangtai@bugua.com',
     url='https://github.com/YuelianINC',
     description='django aliyun oss backend',
-    long_description=open('README.md').read(),
+    long_description='',
     license='Apache2',
     requires=[
         'Django',
