@@ -8,7 +8,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='django-aliyun-oss',
-    version='0.2',
+    version='0.3',
     packages=find_packages(),
     author='WANG Tai',
     author_email='wangtai@bugua.com',
