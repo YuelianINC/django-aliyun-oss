@@ -102,7 +102,7 @@ class OSSStorage(Storage):
         else:
             headers = {'Range': 'bytes=%s-%s' % (start_range, end_range)}
         response = self.connection.get_object(self.bucket, name, headers)
-        print('response.status', response.status)
+        # print('response.status', response.status)
         if int(response.status / 100) != 2:
             raise IOError("OSSStorageError: %s, %s" % (response.status, response.read()))
 
@@ -206,7 +206,10 @@ class OSSStorageFile(File):
         else:
             args = [self.start_range, self.start_range + num_bytes - 1]
         self.start_range = 0
-        data, etags, content_range = self._storage._read(self._name, *args)
+        # data, etags, content_range = self._storage._read(self._name, *args)
+        # https://help.aliyun.com/knowledge_detail/7596787.html
+        # using get ranged content method, will be bug
+        data, etags, content_range = self._storage._read(self._name)
         if content_range:
             current_range, size = content_range.split(' ', 1)[1].split('/', 1)
             start_range, end_range = current_range.split('-', 1)
